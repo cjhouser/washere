@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+option go_package = "github.com/cjhouser/washere/models";
+
+import "google/protobuf/timestamp.proto";
+
+message Signature {
+  string text = 1;
+  google.protobuf.Timestamp createdAt = 2;
+}
