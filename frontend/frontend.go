@@ -4,6 +4,9 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+
+	"github.com/cjhouser/washere/models"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type signaturePageData struct {
@@ -22,7 +25,7 @@ func main() {
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		template := template.Must(template.ParseFiles("home.html"))
+		template := template.Must(template.ParseFiles("index.html"))
 		data := signaturePageData{
 			pageTitle: "washere",
 			signatures: []models.Signature{
