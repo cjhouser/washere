@@ -10,8 +10,8 @@ import (
 )
 
 type signaturePageData struct {
-	pageTitle  string
-	signatures []models.Signature
+	PageTitle  string
+	Signatures []models.Signature
 }
 
 func main() {
@@ -25,19 +25,26 @@ func main() {
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		template := template.Must(template.ParseFiles("index.html"))
-		data := signaturePageData{
-			pageTitle: "washere",
-			signatures: []models.Signature{
-				{Text: "charles was here", CreatedAt: timestamppb.Now()},
-			},
-		}
-		template.Execute(w, data)
-		log.Println(http.StatusOK)
-		http.ServeFile(w, r, "index.html")
+		serveTemplate(w)
+		log.Println(http.StatusOK, "GET", "/")
 	} else {
-		log.Println(http.StatusNotFound)
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"message": "not found"}`))
+		serveTemplate(w)
+		log.Println(http.StatusNotFound)
+	}
+}
+
+func serveTemplate(w http.ResponseWriter) {
+	template := template.Must(template.ParseFiles("index.html"))
+	data := signaturePageData{
+		PageTitle: "washere",
+		Signatures: []models.Signature{
+			{Text: "charles was here", CreatedAt: timestamppb.Now()},
+			{Text: "i was not here", CreatedAt: timestamppb.Now()},
+		},
+	}
+	err := template.Execute(w, data)
+	if err != nil {
+		log.Println(err)
 	}
 }
