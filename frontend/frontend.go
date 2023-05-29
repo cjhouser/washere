@@ -25,26 +25,22 @@ func main() {
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		serveTemplate(w)
+		template := template.Must(template.ParseFiles("index.html"))
+		data := signaturePageData{
+			PageTitle: "washere",
+			Signatures: []models.Signature{
+				{Text: "charles was here", CreatedAt: timestamppb.Now()},
+				{Text: "i was not here", CreatedAt: timestamppb.Now()},
+			},
+		}
+		err := template.Execute(w, data)
+		if err != nil {
+			log.Println(err)
+		}
 		log.Println(http.StatusOK, "GET", "/")
 	} else {
 		w.WriteHeader(http.StatusNotFound)
-		serveTemplate(w)
+		w.Write([]byte(`{"message": "not found"}`))
 		log.Println(http.StatusNotFound)
-	}
-}
-
-func serveTemplate(w http.ResponseWriter) {
-	template := template.Must(template.ParseFiles("index.html"))
-	data := signaturePageData{
-		PageTitle: "washere",
-		Signatures: []models.Signature{
-			{Text: "charles was here", CreatedAt: timestamppb.Now()},
-			{Text: "i was not here", CreatedAt: timestamppb.Now()},
-		},
-	}
-	err := template.Execute(w, data)
-	if err != nil {
-		log.Println(err)
 	}
 }
