@@ -4,7 +4,7 @@
 // - protoc             v3.6.1
 // source: signature.proto
 
-package __
+package models
 
 import (
 	context "context"

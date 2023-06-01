@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package models;
 
-option go_package = "./";
+option go_package = "github.com/cjhouser/washere/models";
 
 service Signature {
     rpc Get (SignatureRequest) returns (stream SignatureResponse) {}
