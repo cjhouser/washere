@@ -1,10 +1,16 @@
 syntax = "proto3";
 
-option go_package = "github.com/cjhouser/washere/models";
+package models;
 
-import "google/protobuf/timestamp.proto";
+option go_package = "./";
 
-message Signature {
-  string text = 1;
-  google.protobuf.Timestamp createdAt = 2;
+service Signature {
+    rpc Get (SignatureRequest) returns (stream SignatureResponse) {}
+}
+
+message SignatureRequest {}
+
+message SignatureResponse {
+    uint64 id = 1;
+    string signature = 2;
 }
