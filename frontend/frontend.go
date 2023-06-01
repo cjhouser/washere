@@ -1,17 +1,19 @@
 package main
 
 import (
+	"context"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
 
 	"github.com/cjhouser/washere/models"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/grpc"
 )
 
 type signaturePageData struct {
-	PageTitle  string
-	Signatures []models.Signature
+	PageTitle          string
+	SignatureResponses []models.SignatureResponse
 }
 
 func main() {
@@ -25,15 +27,38 @@ func main() {
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
+		var opts []grpc.DialOption
+		conn, err := grpc.Dial("localhost:8081", opts...)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		defer conn.Close()
+		client := models.NewSignatureClient(conn)
+		signatureRequest := &models.SignatureRequest{}
+		signatureResponses := []models.SignatureResponse{}
+		stream, err := client.Get(context.Background(), signatureRequest)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		for {
+			signatureResponse, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			signatureResponses = append(signatureResponses, signatureResponse)
+		}
 		template := template.Must(template.ParseFiles("index.html"))
 		data := signaturePageData{
-			PageTitle: "washere",
-			Signatures: []models.Signature{
-				{Text: "charles was here", CreatedAt: timestamppb.Now()},
-				{Text: "i was not here", CreatedAt: timestamppb.Now()},
-			},
+			PageTitle:          "washere",
+			SignatureResponses: signatureResponses,
 		}
-		err := template.Execute(w, data)
+		err = template.Execute(w, data)
 		if err != nil {
 			log.Println(err)
 		}
