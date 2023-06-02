@@ -9,11 +9,12 @@ import (
 
 	"github.com/cjhouser/washere/models"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type signaturePageData struct {
-	PageTitle          string
-	SignatureResponses []models.SignatureResponse
+	PageTitle  string
+	Signatures []string
 }
 
 func main() {
@@ -27,8 +28,7 @@ func main() {
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		var opts []grpc.DialOption
-		conn, err := grpc.Dial("localhost:8081", opts...)
+		conn, err := grpc.Dial("localhost:8081", grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			log.Println(err)
 			return
@@ -36,7 +36,7 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 		defer conn.Close()
 		client := models.NewSignatureClient(conn)
 		signatureRequest := &models.SignatureRequest{}
-		signatureResponses := []models.SignatureResponse{}
+		signatures := []string{}
 		stream, err := client.Get(context.Background(), signatureRequest)
 		if err != nil {
 			log.Println(err)
@@ -51,12 +51,12 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 				log.Println(err)
 				return
 			}
-			signatureResponses = append(signatureResponses, signatureResponse)
+			signatures = append(signatures, signatureResponse.GetSignature())
 		}
 		template := template.Must(template.ParseFiles("index.html"))
 		data := signaturePageData{
-			PageTitle:          "washere",
-			SignatureResponses: signatureResponses,
+			PageTitle:  "washere",
+			Signatures: signatures,
 		}
 		err = template.Execute(w, data)
 		if err != nil {

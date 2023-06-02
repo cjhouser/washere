@@ -1,5 +1,5 @@
-github.com/cjhouser/washere/models v0.0.0-20230601025212-7f86b5b9d2ab h1:WxRKEMbNNNzR1T2QCsp/7tgi51R8B3FiQ9HkvEPv9D0=
-github.com/cjhouser/washere/models v0.0.0-20230601025212-7f86b5b9d2ab/go.mod h1:ac0Pbzarms2W7zPFcE1GkoSiYQBEO3Ll9MeBGkgQsyw=
+github.com/cjhouser/washere/models v0.0.0-20230529034454-ac803c6a741b h1:qbEEzEtkaFb8OTnJGqXPqnAGf5p7jWaYDaxpMKyBjTw=
+github.com/cjhouser/washere/models v0.0.0-20230529034454-ac803c6a741b/go.mod h1:nDT21DGTNq+i/wVfORdBRCqj/n2OEXqs7yp1TtlthTc=
 github.com/cjhouser/washere/models v0.0.0-20230601033405-245a3fdd6a10 h1:PPBq/0ehO/0065U0j3M/BzjpQRwu/a6j9Byjwi1vG/E=
 github.com/cjhouser/washere/models v0.0.0-20230601033405-245a3fdd6a10/go.mod h1:ac0Pbzarms2W7zPFcE1GkoSiYQBEO3Ll9MeBGkgQsyw=
 github.com/golang/protobuf v1.5.0/go.mod h1:FsONVRAS9T7sI+LIUmWTfcYkHO4aIWwzhcaSAoJOfIk=

@@ -1,4 +1,4 @@
-module github.com/cjhouser/washere/frontend
+module github.com/cjhouser/washere/signature/read
 
 go 1.20
 
