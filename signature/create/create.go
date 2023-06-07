@@ -4,28 +4,43 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/cjhouser/washere/models"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	"github.com/nsqio/go-nsq"
 )
 
 func main() {
-	http.HandleFunc("/signature", createSignature)
-
-	err := http.ListenAndServe(":8080", nil)
+	config := nsq.NewConfig()
+	producer, err := nsq.NewProducer("192.168.0.252:31000", config)
 	if err != nil {
 		log.Fatal(err)
 	}
-}
 
-func createSignature(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "POST":
-		// check for empty data. no empty data allowed
-		signature := models.Signature{Text: "charles was here", CreatedAt: timestamppb.Now()}
-		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(`{"message": "OK"}`))
-	default:
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"message": "not found"}`))
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			err := r.ParseForm()
+			if err != nil {
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"message": "internal server error"}`))
+			}
+			signature := r.PostForm.Get("signature")
+			err = producer.Publish("new-signatures", []byte(signature))
+			if err != nil {
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"message": "internal server error"}`))
+			} else {
+				w.WriteHeader(http.StatusCreated)
+				w.Write([]byte(`{"message": "OK"}`))
+			}
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"message": "not found"}`))
+		}
+
+	})
+	log.Println("signature create - listening on 8081")
+	err = http.ListenAndServe(":8081", nil)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
