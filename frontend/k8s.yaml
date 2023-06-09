@@ -2,44 +2,42 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: reader 
+  name: frontend 
   namespace: washere
   labels:
     app: washere
-    component: reader
+    component: frontend
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: washere
-      component: reader 
+      component: frontend 
   template:
     metadata:
       labels:
         app: washere
-        component: reader 
+        component: frontend 
     spec:
       containers:
       - name: main
-        image: cjhouser/washere:reader
+        image: cjhouser/washere:frontend
         imagePullPolicy: Always
         command:
         - "/work/run"
-        env:
-        - name: DATABASE_URL
-          value: postgres://postgres:development@database:5432/washere
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: reader
+  name: frontend
   namespace: washere 
 spec:
   ports:
   - port: 8080
     targetPort: 8080
+    nodePort: 32222
   selector:
     app: washere
-    component: reader
-  type: ClusterIP
+    component: frontend
+  type: NodePort
 ---

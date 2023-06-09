@@ -9,7 +9,7 @@ import (
 
 func main() {
 	config := nsq.NewConfig()
-	producer, err := nsq.NewProducer("192.168.0.252:31000", config)
+	producer, err := nsq.NewProducer("nsqd.default:4150", config)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -38,8 +38,8 @@ func main() {
 		}
 
 	})
-	log.Println("signature create - listening on 8082")
-	err = http.ListenAndServe(":8082", nil)
+	log.Println("signature create - listening on 8080")
+	err = http.ListenAndServe("0.0.0.0:8080", nil)
 	if err != nil {
 		log.Fatal(err)
 	}

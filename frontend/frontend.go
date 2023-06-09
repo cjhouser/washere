@@ -20,7 +20,7 @@ type signaturePageData struct {
 func main() {
 	http.HandleFunc("/", serveHome)
 	log.Println("Listening on :8080...")
-	err := http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe("0.0.0.0:8080", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func main() {
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		conn, err := grpc.Dial("192.168.0.252:32001", grpc.WithTransportCredentials(insecure.NewCredentials()))
+		conn, err := grpc.Dial("reader:8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			log.Println(err)
 			return
