@@ -25,9 +25,16 @@ func (h *newSignatureHandler) HandleMessage(m *nsq.Message) error {
 		return nil
 	}
 
-	_, err := h.databaseConnection.Query(h.context, fmt.Sprintf("INSERT INTO signatures (signature) VALUES (%s);", m.Body))
+	resp, err := h.databaseConnection.Query(h.context, fmt.Sprintf("INSERT INTO signatures (signature) VALUES ('%s');", m.Body))
 	if err != nil {
 		log.Println("failed to insert into database", err)
+	}
+
+	for resp.Next() {
+		err = resp.Scan()
+		if err != nil {
+			log.Println("scan failure", err)
+		}
 	}
 
 	// Returning a non-nil error will automatically send a REQ command to NSQ to re-queue the message.
@@ -41,21 +48,28 @@ func main() {
 	}
 	defer conn.Close(context.Background())
 
-	_, err = conn.Query(context.Background(), "CREATE TABLE IF NOT EXISTS signatures VALUES (id INTEGER PRIMARY KEY AUTO INCREMENT, signature TEXT NOT NULL);")
+	resp, err := conn.Query(context.Background(), "CREATE TABLE IF NOT EXISTS signatures (id BIGSERIAL PRIMARY KEY, signature TEXT NOT NULL);")
 	if err != nil {
 		log.Fatalln("error creating table", err)
+	}
+
+	for resp.Next() {
+		err = resp.Scan()
+		if err != nil {
+			log.Println("row failure when creating table", err)
+		}
 	}
 
 	config := nsq.NewConfig()
 	consumer, err := nsq.NewConsumer("new-signatures", "database", config)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln("failed to create new consumer", err)
 	}
 	consumer.AddHandler(&newSignatureHandler{context.Background(), conn})
 
-	err = consumer.ConnectToNSQLookupd("localhost:4161")
+	err = consumer.ConnectToNSQLookupd(os.Getenv("NSQLOOKUPD_URL"))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln("failed to connect to nsqlookupd", err)
 	}
 
 	// wait for signal to exit

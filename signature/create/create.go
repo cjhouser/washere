@@ -38,8 +38,8 @@ func main() {
 		}
 
 	})
-	log.Println("signature create - listening on 8081")
-	err = http.ListenAndServe(":8081", nil)
+	log.Println("signature create - listening on 8082")
+	err = http.ListenAndServe(":8082", nil)
 	if err != nil {
 		log.Fatal(err)
 	}

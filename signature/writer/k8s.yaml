@@ -1,0 +1,33 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: writer
+  namespace: washere
+  labels:
+    app: washere
+    component: writer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: washere
+      component: writer 
+  template:
+    metadata:
+      labels:
+        app: washere
+        component: writer 
+    spec:
+      containers:
+      - name: main
+        image: cjhouser/washere:writer
+        imagePullPolicy: Always
+        command:
+        - "/work/run"
+        env:
+        - name: DATABASE_URL
+          value: postgres://postgres:development@database:5432/washere
+        - name: NSQLOOKUPD_URL
+          value: nsqlookupd.default:4161
+---
