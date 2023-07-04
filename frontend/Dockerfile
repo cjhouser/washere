@@ -4,6 +4,6 @@ WORKDIR /work
 COPY go.mod go.sum ./
 RUN go mod download
 COPY *.go ./
-COPY *.html ./
+COPY static ./static
 RUN CGO_ENABLED=0 GOOS=linux go build -o run
 CMD ["/work/run"]
