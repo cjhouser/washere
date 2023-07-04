@@ -2,58 +2,76 @@ package main
 
 import (
 	"context"
-	"flag"
+	"encoding/json"
+	"fmt"
 	"log"
-	"net"
+	"net/http"
 	"os"
 
-	"github.com/cjhouser/washere/models"
 	"github.com/jackc/pgx/v5"
-	"google.golang.org/grpc"
 )
 
-type signatureServer struct {
-	models.UnimplementedSignatureServer
+type signature struct {
+	id   uint64
+	text string
+}
+
+type server struct {
 	databaseConnection *pgx.Conn
 	context            context.Context
 }
 
-func (s *signatureServer) Get(request *models.SignatureRequest, stream models.Signature_GetServer) error {
-	resp, err := s.databaseConnection.Query(s.context, "SELECT * FROM signatures;")
-	if err != nil {
-		log.Println("failed to select from database", err)
-	}
-
-	for resp.Next() {
-		var id uint64
-		var signature string
-		err = resp.Scan(&id, &signature)
+func (s server) getSignatures(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	switch r.Method {
+	case "GET":
+		page := r.URL.Query().Get("page")
+		resp, err := s.databaseConnection.Query(s.context, fmt.Sprintf("SELECT * FROM signatures ORDER BY id WHERE id=%s LIMIT 10;", page))
 		if err != nil {
-			log.Println("scan failure", err)
+			log.Println("E: failed to select from database", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"message":"internal server error"}`))
+			return
 		}
-		err = stream.Send(&models.SignatureResponse{Id: id, Signature: signature})
+		signatures := []signature{}
+		for resp.Next() {
+			var id uint64
+			var text string
+			err = resp.Scan(&id, &text)
+			if err != nil {
+				log.Println("E: scan failure", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"message":"internal server error"}`))
+				return
+			}
+			signatures = append(signatures, signature{id, text})
+		}
+		data, err := json.Marshal(signatures)
 		if err != nil {
-			log.Println("failed sending data to frontend", err)
+			log.Println("E: marshal failure", err)
 		}
+		w.Write(data)
+	default:
+		log.Println("E: received non-GET request")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte(`{"message":"method not allowed"}`))
+		return
 	}
-	return nil
 }
 
 func main() {
-	flag.Parse()
+	listenSocket := os.Getenv("LISTEN_SOCKET")
 	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
-		log.Fatalln("unable to connect", err)
+		log.Fatalln("E: unable to connect to database", err)
 	}
 	defer conn.Close(context.Background())
-
-	log.Println("listening on the meme thing")
-	lis, err := net.Listen("tcp", "0.0.0.0:8080")
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+	log.Println("I: database connection established")
+	serverInstance := server{
+		conn,
+		context.Background(),
 	}
-	var opts []grpc.ServerOption
-	grpcServer := grpc.NewServer(opts...)
-	models.RegisterSignatureServer(grpcServer, &signatureServer{databaseConnection: conn, context: context.Background()})
-	grpcServer.Serve(lis)
+	http.HandleFunc("/signatures", serverInstance.getSignatures)
+	log.Println("I: listening on", listenSocket)
+	http.ListenAndServe(listenSocket, nil)
 }

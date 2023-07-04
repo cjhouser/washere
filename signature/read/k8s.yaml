@@ -9,6 +9,7 @@ metadata:
     component: reader
 spec:
   replicas: 1
+  revisionHistoryLimit: 0
   selector:
     matchLabels:
       app: washere
@@ -28,6 +29,8 @@ spec:
         env:
         - name: DATABASE_URL
           value: postgres://postgres:development@database:5432/washere
+        - name: LISTEN_SOCKET
+          value: 0.0.0.0:8080
 ---
 apiVersion: v1
 kind: Service
@@ -37,9 +40,9 @@ metadata:
 spec:
   ports:
   - port: 8080
-    targetPort: 8080
+    nodePort: 32223
   selector:
     app: washere
     component: reader
-  type: ClusterIP
+  type: NodePort
 ---
