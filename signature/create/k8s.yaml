@@ -26,6 +26,11 @@ spec:
         imagePullPolicy: Always
         command:
         - "/work/run"
+        env:
+        - name: LISTEN_SOCKET
+          value: 0.0.0.0:8080
+        - name: NSQD_SOCKET
+          value: nsqd.default:4150
 ---
 apiVersion: v1
 kind: Service
@@ -35,8 +40,7 @@ metadata:
 spec:
   ports:
   - port: 8080
-    targetPort: 8080
-    nodePort: 32005
+    nodePort: 32224
   selector:
     app: washere
     component: creator

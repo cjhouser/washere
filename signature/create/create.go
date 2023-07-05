@@ -3,44 +3,52 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/nsqio/go-nsq"
 )
 
-func main() {
-	config := nsq.NewConfig()
-	producer, err := nsq.NewProducer("nsqd.default:4150", config)
-	if err != nil {
-		log.Fatal(err)
-	}
+type server struct {
+	producer *nsq.Producer
+}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "POST" {
-			err := r.ParseForm()
-			if err != nil {
-				log.Println(err)
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(`{"message": "internal server error"}`))
-			}
-			signature := r.PostForm.Get("signature")
-			err = producer.Publish("new-signatures", []byte(signature))
-			if err != nil {
-				log.Println(err)
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(`{"message": "internal server error"}`))
-			} else {
-				w.WriteHeader(http.StatusCreated)
-				w.Write([]byte(`{"message": "OK"}`))
-			}
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(`{"message": "not found"}`))
+func (s server) handler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+		if r.ParseForm() != nil {
+			log.Println("E: failed to parse form")
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
 		}
-
-	})
-	log.Println("signature create - listening on 8080")
-	err = http.ListenAndServe("0.0.0.0:8080", nil)
-	if err != nil {
-		log.Fatal(err)
+		signature := r.PostForm.Get("signature")
+		if s.producer.Publish("new-signatures", []byte(signature)) != nil {
+			log.Println("E: failed to publish signature")
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte(`{"message": "created"}`))
+		log.Println("I: created signature:", signature)
+	default:
+		log.Println("E: received non-GET request")
+		http.Error(w, "internal server error", http.StatusMethodNotAllowed)
+		return
 	}
+}
+
+func main() {
+	listenSocket := os.Getenv("LISTEN_SOCKET")
+	nsqdSocket := os.Getenv("NSQD_SOCKET")
+	config := nsq.NewConfig()
+	producer, err := nsq.NewProducer(nsqdSocket, config)
+	if err != nil {
+		log.Fatal("E: failed creating nsq producer", err)
+	}
+	serverInstance := server{
+		producer,
+	}
+	http.HandleFunc("/signatures", serverInstance.handler)
+	log.Println("I: listening on", listenSocket)
+	http.ListenAndServe(listenSocket, nil)
 }
