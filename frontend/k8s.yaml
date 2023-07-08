@@ -38,9 +38,27 @@ metadata:
 spec:
   ports:
   - port: 8080
-    nodePort: 32222
   selector:
     app: washere
     component: frontend
-  type: NodePort
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend
+  namespace: washere
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: washere.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: frontend
+            port:
+              number: 8080
+        path: /
+        pathType: Prefix
 ---

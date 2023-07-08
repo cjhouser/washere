@@ -40,9 +40,27 @@ metadata:
 spec:
   ports:
   - port: 8080
-    nodePort: 32224
   selector:
     app: washere
     component: creator
-  type: NodePort
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: creator
+  namespace: washere
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: washere.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: creator
+            port:
+              number: 8080
+        path: /signatures/create
+        pathType: Exact
 ---

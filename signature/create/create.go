@@ -48,7 +48,7 @@ func main() {
 	serverInstance := server{
 		producer,
 	}
-	http.HandleFunc("/signatures", serverInstance.handler)
+	http.HandleFunc("/signatures/create", serverInstance.handler)
 	log.Println("I: listening on", listenSocket)
 	http.ListenAndServe(listenSocket, nil)
 }
