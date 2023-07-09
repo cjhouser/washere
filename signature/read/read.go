@@ -32,17 +32,18 @@ func (s server) getSignatures(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
-		resp, err := s.databaseConnection.Query(s.context, fmt.Sprintf("SELECT * FROM signatures ORDER BY id LIMIT 10 OFFSET %d;", page*10))
+		rows, err := s.databaseConnection.Query(s.context, fmt.Sprintf("SELECT * FROM signatures ORDER BY id LIMIT 10 OFFSET %d;", page*10))
 		if err != nil {
 			log.Println("E: failed to select from database", err)
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
+		defer rows.Close()
 		signatures := []signature{}
-		for resp.Next() {
+		for rows.Next() {
 			var id uint64
 			var text string
-			if resp.Scan(&id, &text) != nil {
+			if rows.Scan(&id, &text) != nil {
 				log.Println("E: scan failure", err)
 				http.Error(w, "internal server error", http.StatusInternalServerError)
 				return
