@@ -17,12 +17,7 @@ type signature struct {
 	Text string
 }
 
-type server struct {
-	databaseConnection *pgx.Conn
-	context            context.Context
-}
-
-func (s server) getSignatures(w http.ResponseWriter, r *http.Request) {
+func getSignatures(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	switch r.Method {
 	case "GET":
@@ -32,7 +27,15 @@ func (s server) getSignatures(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
-		rows, err := s.databaseConnection.Query(s.context, fmt.Sprintf("SELECT * FROM signatures ORDER BY id LIMIT 10 OFFSET %d;", page*10))
+		ctx := context.Background()
+		conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
+		if err != nil {
+			log.Println("E: failed to connect to database", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+		defer conn.Close(ctx)
+		rows, err := conn.Query(ctx, fmt.Sprintf("SELECT * FROM signatures ORDER BY id LIMIT 10 OFFSET %d;", page*10))
 		if err != nil {
 			log.Println("E: failed to select from database", err)
 			http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -72,17 +75,8 @@ func (s server) getSignatures(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	listenSocket := os.Getenv("LISTEN_SOCKET")
-	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
-	if err != nil {
-		log.Fatalln("E: unable to connect to database", err)
-	}
-	defer conn.Close(context.Background())
 	log.Println("I: database connection established")
-	serverInstance := server{
-		conn,
-		context.Background(),
-	}
-	http.HandleFunc("/signatures", serverInstance.getSignatures)
+	http.HandleFunc("/signatures", getSignatures)
 	log.Println("I: listening on", listenSocket)
 	http.ListenAndServe(listenSocket, nil)
 }
