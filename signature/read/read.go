@@ -9,7 +9,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type signature struct {
@@ -17,7 +17,11 @@ type signature struct {
 	Text string
 }
 
-func getSignatures(w http.ResponseWriter, r *http.Request) {
+type server struct {
+	pool *pgxpool.Pool
+}
+
+func (s server) getSignatures(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	switch r.Method {
 	case "GET":
@@ -27,15 +31,8 @@ func getSignatures(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
-		ctx := context.Background()
-		conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
-		if err != nil {
-			log.Println("E: failed to connect to database", err)
-			http.Error(w, "internal server error", http.StatusInternalServerError)
-			return
-		}
-		defer conn.Close(ctx)
-		rows, err := conn.Query(ctx, fmt.Sprintf("SELECT * FROM signatures ORDER BY id LIMIT 10 OFFSET %d;", page*10))
+
+		rows, err := s.pool.Query(r.Context(), fmt.Sprintf("SELECT * FROM signatures ORDER BY id LIMIT 10 OFFSET %d;", page*10))
 		if err != nil {
 			log.Println("E: failed to select from database", err)
 			http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -75,8 +72,16 @@ func getSignatures(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	listenSocket := os.Getenv("LISTEN_SOCKET")
+	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Fatal("E: failed to create database connection pool")
+	}
+	defer pool.Close()
+	serverInstance := server{
+		pool,
+	}
 	log.Println("I: database connection established")
-	http.HandleFunc("/signatures", getSignatures)
+	http.HandleFunc("/signatures", serverInstance.getSignatures)
 	log.Println("I: listening on", listenSocket)
 	http.ListenAndServe(listenSocket, nil)
 }
