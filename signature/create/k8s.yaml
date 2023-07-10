@@ -31,6 +31,11 @@ spec:
           value: 0.0.0.0:8080
         - name: NSQD_SOCKET
           value: nsqd.default:4150
+        resources:
+          limits:
+            memory: 8Mi
+          requests:
+            cpu: 8m 
 ---
 apiVersion: v1
 kind: Service
@@ -63,4 +68,30 @@ spec:
               number: 8080
         path: /signatures/create
         pathType: Exact
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: creator 
+  namespace: washere
+spec:
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: creator
 ---
