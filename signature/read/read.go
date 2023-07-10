@@ -43,7 +43,7 @@ func (s server) getSignatures(w http.ResponseWriter, r *http.Request) {
 		for rows.Next() {
 			var id uint64
 			var text string
-			if rows.Scan(&id, &text) != nil {
+			if err := rows.Scan(&id, &text); err != nil {
 				log.Println("E: scan failure", err)
 				http.Error(w, "internal server error", http.StatusInternalServerError)
 				return
@@ -56,8 +56,7 @@ func (s server) getSignatures(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
-		_, err = w.Write(data)
-		if err != nil {
+		if _, err := w.Write(data); err != nil {
 			log.Println("E: write failure", err)
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
@@ -74,7 +73,7 @@ func main() {
 	listenSocket := os.Getenv("LISTEN_SOCKET")
 	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
-		log.Fatal("E: failed to create database connection pool")
+		log.Fatalln("F: failed to create database connection pool")
 	}
 	defer pool.Close()
 	serverInstance := server{
@@ -83,5 +82,7 @@ func main() {
 	log.Println("I: database connection established")
 	http.HandleFunc("/signatures", serverInstance.getSignatures)
 	log.Println("I: listening on", listenSocket)
-	http.ListenAndServe(listenSocket, nil)
+	if err := http.ListenAndServe(listenSocket, nil); err != nil {
+		log.Fatalln("F: listen and server failure", err)
+	}
 }

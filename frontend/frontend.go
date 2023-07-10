@@ -11,5 +11,7 @@ func main() {
 	static := http.FileServer(http.Dir("static/"))
 	http.Handle("/static/", http.StripPrefix("/static", static))
 	log.Println("I: listening on", listenSocket)
-	http.ListenAndServe(listenSocket, nil)
+	if err := http.ListenAndServe(listenSocket, nil); err != nil {
+		log.Fatalln("F: listend and server failure", err)
+	}
 }

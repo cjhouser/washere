@@ -15,8 +15,8 @@ type server struct {
 func (s server) handler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
-		if r.ParseForm() != nil {
-			log.Println("E: failed to parse form")
+		if err := r.ParseForm(); err != nil {
+			log.Println("E: failed to parse form", err)
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -28,7 +28,11 @@ func (s server) handler(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(`{"message": "created"}`))
+		if _, err := w.Write([]byte(`{"message": "created"}`)); err != nil {
+			log.Println("E: failed to send response", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
 		log.Println("I: created signature:", signature)
 	default:
 		log.Println("E: received non-GET request")
@@ -43,12 +47,14 @@ func main() {
 	config := nsq.NewConfig()
 	producer, err := nsq.NewProducer(nsqdSocket, config)
 	if err != nil {
-		log.Fatal("E: failed creating nsq producer", err)
+		log.Fatalln("F: failed creating nsq producer", err)
 	}
 	serverInstance := server{
 		producer,
 	}
 	http.HandleFunc("/signatures/create", serverInstance.handler)
 	log.Println("I: listening on", listenSocket)
-	http.ListenAndServe(listenSocket, nil)
+	if err := http.ListenAndServe(listenSocket, nil); err != nil {
+		log.Fatalln("F: listen and serve failure", err)
+	}
 }
