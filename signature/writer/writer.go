@@ -9,74 +9,57 @@ import (
 	"syscall"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nsqio/go-nsq"
 )
 
-type newSignatureHandler struct {
-	context            context.Context
-	databaseConnection *pgx.Conn
+type handler struct {
+	databasePool *pgxpool.Pool
 }
 
 // HandleMessage implements the Handler interface.
-func (h *newSignatureHandler) HandleMessage(m *nsq.Message) error {
+func (h handler) HandleMessage(m *nsq.Message) error {
 	if len(m.Body) == 0 {
 		// Returning nil will automatically send a FIN command to NSQ to mark the message as processed.
 		// In this case, a message with an empty body is simply ignored/discarded.
 		return nil
 	}
-
-	resp, err := h.databaseConnection.Query(h.context, fmt.Sprintf("INSERT INTO signatures (signature) VALUES ('%s');", m.Body))
+	row := h.databasePool.QueryRow(context.TODO(), fmt.Sprintf("INSERT INTO signatures (signature) VALUES ('%s');", m.Body))
+	err := row.Scan()
 	if err != nil {
-		log.Println("failed to insert into database", err)
+		log.Println("E: scan failure", err)
 	}
-
-	for resp.Next() {
-		err = resp.Scan()
-		if err != nil {
-			log.Println("scan failure", err)
-		}
-	}
-
 	// Returning a non-nil error will automatically send a REQ command to NSQ to re-queue the message.
 	return err
 }
 
 func main() {
-	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
-		log.Fatalln("unable to connect", err)
+		log.Fatalln("F: failed to create connection pool", err)
 	}
-	defer conn.Close(context.Background())
+	defer pool.Close()
 
-	resp, err := conn.Query(context.Background(), "CREATE TABLE IF NOT EXISTS signatures (id BIGSERIAL PRIMARY KEY, signature TEXT NOT NULL);")
-	if err != nil {
-		log.Fatalln("error creating table", err)
-	}
-
-	for resp.Next() {
-		err = resp.Scan()
-		if err != nil {
-			log.Println("row failure when creating table", err)
+	row := pool.QueryRow(context.Background(), "CREATE TABLE IF NOT EXISTS signatures (id BIGSERIAL PRIMARY KEY, signature TEXT NOT NULL);")
+	if err := row.Scan(); err != nil {
+		if err != pgx.ErrNoRows {
+			log.Fatalln("F: failed to create signatures table", err)
 		}
 	}
 
-	config := nsq.NewConfig()
-	consumer, err := nsq.NewConsumer("new-signatures", "database", config)
+	consumer, err := nsq.NewConsumer("new-signatures", "database", nsq.NewConfig())
 	if err != nil {
-		log.Fatalln("failed to create new consumer", err)
+		log.Fatalln("F: failed to create new-signatures consumer", err)
 	}
-	consumer.AddHandler(&newSignatureHandler{context.Background(), conn})
+	defer consumer.Stop()
 
-	err = consumer.ConnectToNSQLookupd(os.Getenv("NSQLOOKUPD_URL"))
-	if err != nil {
-		log.Fatalln("failed to connect to nsqlookupd", err)
+	consumer.AddHandler(handler{pool})
+	if err := consumer.ConnectToNSQLookupd(os.Getenv("NSQLOOKUPD_URL")); err != nil {
+		log.Fatalln("F: failed to connect to nsqlookupd", err)
 	}
 
 	// wait for signal to exit
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
-
-	// Gracefully stop the consumer.
-	consumer.Stop()
 }
