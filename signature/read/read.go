@@ -72,7 +72,7 @@ func (s server) getSignatures(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	listenSocket := os.Getenv("LISTEN_SOCKET")
-	newRelicLicense := os.Getenv("newRelicLicense")
+	newRelicLicense := os.Getenv("NEW_RELIC_LICENSE")
 	app, err := newrelic.NewApplication(
 		newrelic.ConfigAppName("signature-reader"),
 		newrelic.ConfigLicense(newRelicLicense),
