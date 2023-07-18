@@ -31,6 +31,8 @@ spec:
           value: postgres://postgres:development@database:5432/washere
         - name: LISTEN_SOCKET
           value: 0.0.0.0:8080
+        - name: NEW_RELIC_LICENSE
+          value: 
         resources:
           limits:
             memory: 8Mi

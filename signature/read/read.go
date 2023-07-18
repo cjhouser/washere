@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
 type signature struct {
@@ -71,6 +72,12 @@ func (s server) getSignatures(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	listenSocket := os.Getenv("LISTEN_SOCKET")
+	newRelicLicense := os.Getenv("newRelicLicense")
+	app, err := newrelic.NewApplication(
+		newrelic.ConfigAppName("signature-reader"),
+		newrelic.ConfigLicense(newRelicLicense),
+		newrelic.ConfigAppLogForwardingEnabled(false),
+	)
 	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		log.Fatalln("F: failed to create database connection pool")
@@ -80,7 +87,7 @@ func main() {
 		pool,
 	}
 	log.Println("I: database connection established")
-	http.HandleFunc("/signatures", serverInstance.getSignatures)
+	http.HandleFunc(newrelic.WrapHandleFunc(app, "/signatures", serverInstance.getSignatures))
 	log.Println("I: listening on", listenSocket)
 	if err := http.ListenAndServe(listenSocket, nil); err != nil {
 		log.Fatalln("F: listen and server failure", err)
