@@ -78,9 +78,12 @@ func main() {
 		newrelic.ConfigLicense(newRelicLicense),
 		newrelic.ConfigAppLogForwardingEnabled(false),
 	)
+	if err != nil {
+		log.Fatalln("F: failed to register New Relic agent", err)
+	}
 	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
-		log.Fatalln("F: failed to create database connection pool")
+		log.Fatalln("F: failed to create database connection pool", err)
 	}
 	defer pool.Close()
 	serverInstance := server{
