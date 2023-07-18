@@ -24,7 +24,7 @@ func (h handler) HandleMessage(m *nsq.Message) error {
 		// In this case, a message with an empty body is simply ignored/discarded.
 		return nil
 	}
-	row := h.databasePool.QueryRow(context.TODO(), fmt.Sprintf("INSERT INTO signatures (signature) VALUES ('%s');", m.Body))
+	row := h.databasePool.QueryRow(context.TODO(), fmt.Sprintf("INSERT INTO signatures (signature) VALUES ('%s') RETURNING id;", m.Body))
 	err := row.Scan()
 	if err != nil {
 		log.Println("E: scan failure", err)
