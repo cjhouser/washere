@@ -31,11 +31,22 @@ spec:
           value: postgres://postgres:development@database:5432/washere
         - name: NSQLOOKUPD_URL
           value: nsqlookupd.default:4161
+        envFrom:
+        - secretRef:
+            name: new-relic-license
         resources:
           limits:
             memory: 8Mi
           requests:
             cpu: 8m
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: new-relic-license
+  namespace: washere
+stringData:
+  NEW_RELIC_LICENSE: 
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

@@ -31,13 +31,22 @@ spec:
           value: 0.0.0.0:8080
         - name: NSQD_SOCKET
           value: nsqd.default:4150
-        - name: NEW_RELIC_LICENSE
-          value: 
+        envFrom:
+        - secretRef:
+            name: new-relic-license
         resources:
           limits:
             memory: 8Mi
           requests:
             cpu: 8m 
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: new-relic-license
+  namespace: washere
+stringData:
+  NEW_RELIC_LICENSE: 
 ---
 apiVersion: v1
 kind: Service

@@ -10,15 +10,19 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/nsqio/go-nsq"
 )
 
 type handler struct {
 	databasePool *pgxpool.Pool
+	newRelic     *newrelic.Application
 }
 
 // HandleMessage implements the Handler interface.
 func (h handler) HandleMessage(m *nsq.Message) error {
+	newRelicTransaction := h.newRelic.StartTransaction("signature-writer")
+	defer newRelicTransaction.End()
 	if len(m.Body) == 0 {
 		// Returning nil will automatically send a FIN command to NSQ to mark the message as processed.
 		// In this case, a message with an empty body is simply ignored/discarded.
@@ -34,6 +38,11 @@ func (h handler) HandleMessage(m *nsq.Message) error {
 }
 
 func main() {
+	newRelicLicense := os.Getenv("NEW_RELIC_LICENSE")
+	newRelic, err := newrelic.NewApplication(
+		newrelic.ConfigLicense(newRelicLicense),
+		newrelic.ConfigAppLogForwardingEnabled(false),
+	)
 	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		log.Fatalln("F: failed to create connection pool", err)
@@ -53,7 +62,7 @@ func main() {
 	}
 	defer consumer.Stop()
 
-	consumer.AddHandler(handler{pool})
+	consumer.AddHandler(handler{pool, newRelic})
 	if err := consumer.ConnectToNSQLookupd(os.Getenv("NSQLOOKUPD_URL")); err != nil {
 		log.Fatalln("F: failed to connect to nsqlookupd", err)
 	}
