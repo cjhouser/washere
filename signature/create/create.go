@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/nsqio/go-nsq"
 )
 
@@ -43,6 +44,15 @@ func (s server) handler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	listenSocket := os.Getenv("LISTEN_SOCKET")
+	newRelicLicense := os.Getenv("NEW_RELIC_LICENSE")
+	app, err := newrelic.NewApplication(
+		newrelic.ConfigAppName("signature-creator"),
+		newrelic.ConfigLicense(newRelicLicense),
+		newrelic.ConfigAppLogForwardingEnabled(false),
+	)
+	if err != nil {
+		log.Fatalln("F: failed to register New Relic agent", err)
+	}
 	nsqdSocket := os.Getenv("NSQD_SOCKET")
 	config := nsq.NewConfig()
 	producer, err := nsq.NewProducer(nsqdSocket, config)
@@ -52,7 +62,7 @@ func main() {
 	serverInstance := server{
 		producer,
 	}
-	http.HandleFunc("/signatures/create", serverInstance.handler)
+	http.HandleFunc(newrelic.WrapHandleFunc(app, "/signatures/create", serverInstance.handler))
 	log.Println("I: listening on", listenSocket)
 	if err := http.ListenAndServe(listenSocket, nil); err != nil {
 		log.Fatalln("F: listen and serve failure", err)
