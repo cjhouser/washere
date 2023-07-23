@@ -46,7 +46,7 @@ func main() {
 	listenSocket := os.Getenv("LISTEN_SOCKET")
 	newRelicLicense := os.Getenv("NEW_RELIC_LICENSE")
 	app, err := newrelic.NewApplication(
-		newrelic.ConfigAppName("signature-creator"),
+		newrelic.ConfigAppName("signature"),
 		newrelic.ConfigLicense(newRelicLicense),
 		newrelic.ConfigAppLogForwardingEnabled(false),
 	)

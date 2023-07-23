@@ -36,17 +36,9 @@ spec:
             name: new-relic-license
         resources:
           limits:
-            memory: 8Mi
+            memory: 16Mi
           requests:
             cpu: 8m 
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: new-relic-license
-  namespace: washere
-stringData:
-  NEW_RELIC_LICENSE: 
 ---
 apiVersion: v1
 kind: Service

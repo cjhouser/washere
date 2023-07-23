@@ -21,7 +21,7 @@ type handler struct {
 
 // HandleMessage implements the Handler interface.
 func (h handler) HandleMessage(m *nsq.Message) error {
-	newRelicTransaction := h.newRelic.StartTransaction("signature-writer")
+	newRelicTransaction := h.newRelic.StartTransaction("consume-and-write")
 	defer newRelicTransaction.End()
 	if len(m.Body) == 0 {
 		// Returning nil will automatically send a FIN command to NSQ to mark the message as processed.
@@ -40,6 +40,7 @@ func (h handler) HandleMessage(m *nsq.Message) error {
 func main() {
 	newRelicLicense := os.Getenv("NEW_RELIC_LICENSE")
 	newRelic, err := newrelic.NewApplication(
+		newrelic.ConfigAppName("signature"),
 		newrelic.ConfigLicense(newRelicLicense),
 		newrelic.ConfigAppLogForwardingEnabled(false),
 	)
